@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { View, Text, Image, Dimensions } from "react-native";
 import { images } from "../../constants";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { PieChart } from "react-native-gifted-charts";
 import { useLocalSearchParams } from "expo-router";
@@ -82,6 +82,40 @@ const Performance = () => {
       gradientCenterColor: "#3BE9DE",
     },
   ];
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#1E2923",
+      flexDirection: "row",
+      // paddingVertical: 10,
+      paddingLeft: -5,
+    },
+    yAxisContainer: {
+      justifyContent: "space-evenly",
+      height: 220, // Ensure this matches the height of the chart
+      marginRight: 5,
+      marginLeft: 15, // Add some space between Y-axis labels and the chart
+      marginBottom: -20,
+
+      marginVertical: 72,
+    },
+    yAxisLabel: {
+      marginVertical: 60,
+      color: "white",
+      fontSize: 10,
+      letterSpacing: 1,
+      marginBottom: 100,
+      marginLeft: 10,
+    },
+    chartStyle: {
+      marginVertical: 10,
+      marginVertical: 4,
+      borderRadius: 16,
+      paddingRight: 1.5,
+      paddingLeft: 1.5,
+      // marginBottom: 10,
+    },
+  });
 
   // Center label component for the pie chart
   const centerLabelComponent = () => (
@@ -122,6 +156,29 @@ const Performance = () => {
       },
     ],
   };
+  // Extracting maximum values for powerGenerated and fuelUsed from the test data
+  const maxPowerGenerated = Math.max(
+    ...machineData.flatMap((machine) =>
+      machine.yearlyData.map((data) =>
+        parseInt(data.powerGenerated.split(" ")[0])
+      )
+    )
+  );
+
+  const maxFuelUsed = Math.max(
+    ...machineData.flatMap((machine) =>
+      machine.yearlyData.map((data) => parseInt(data.fuelUsed.split(" ")[0]))
+    )
+  );
+
+  // Calculate the step size based on the maximum values
+  const stepSize = Math.ceil(Math.max(maxPowerGenerated, maxFuelUsed) / 5);
+
+  // Generate yAxisLabels based on the step size and maximum value
+  const yAxisLabels = Array.from(
+    { length: 6 },
+    (_, index) => index * stepSize
+  ).reverse();
 
   return (
     <SafeAreaView style={{ backgroundColor: "#161622", flex: 1 }}>
@@ -216,7 +273,14 @@ const Performance = () => {
           </View>
 
           {/* Line Chart */}
-          <View style={{ height: 420 }}>
+          <View style={styles.container}>
+            <View style={styles.yAxisContainer}>
+              {yAxisLabels.map((label, index) => (
+                <Text key={index} style={styles.yAxisLabel}>
+                  {label}
+                </Text>
+              ))}
+            </View>
             <ScrollView
               horizontal={true}
               pagingEnabled={true}
@@ -229,8 +293,8 @@ const Performance = () => {
               >
                 <LineChart
                   data={selectedMachine ? lineChartData : randomLineChartData}
-                  width={selectedMachine ? 700 : 1200}
-                  height={420}
+                  width={selectedMachine ? 600 : 1200}
+                  height={400}
                   bezier
                   chartConfig={{
                     backgroundGradientFrom: "#1E2923",
@@ -238,11 +302,8 @@ const Performance = () => {
                     strokeWidth: 3,
                     color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`, // Default color
                   }}
-                  style={{
-                    marginVertical: 8,
-                    borderRadius: 16,
-                  }}
-                  yAxisLabel={"kW/L"}
+                  style={styles.chartStyle}
+                  yAxisLabel={yAxisLabels}
                 />
               </View>
             </ScrollView>

@@ -1,93 +1,91 @@
+// App.js
 import React from "react";
-import {
-  View,
-  Text,
-  ScrollView as RNScrollView,
-  Dimensions,
-} from "react-native";
+import { ScrollView, View, Text, Dimensions, StyleSheet } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import Svg, { Text as SvgText } from "react-native-svg";
-import machineData from "../lib/testData"; // Adjust the path according to your project structure
 
-const ScrollableChart = ({ machineId }) => {
-  const screenWidth = Dimensions.get("window").width;
-  const selectedMachine = machineData.find(
-    (machine) => machine.id === machineId
-  );
+const screenWidth = Dimensions.get("window").width;
 
-  const chartHeight = 400;
+const data = {
+  labels: ["January", "February", "March", "April", "May", "June"],
+  datasets: [
+    {
+      data: [20, 45, 28, 80, 99, 43],
+    },
+  ],
+};
 
-  const chartConfig = {
-    backgroundGradientFrom: "#1E2923",
-    backgroundGradientTo: "#08130D",
-    color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-    strokeWidth: 2,
-    barPercentage: 0.5,
-  };
+const chartConfig = {
+  backgroundGradientFrom: "#1E2923",
+  backgroundGradientTo: "#08130D",
+  color: (opacity = 1) => `rgba(26, 255, 146, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+  style: {
+    borderRadius: 16,
+  },
+  propsForDots: {
+    r: "4",
+    strokeWidth: "2",
+    stroke: "#ffa726",
+  },
+};
 
-  const yAxisLabels = [0, 200, 400, 600, 800, 1000, 1200];
+const yAxisLabels = [100, 80, 60, 40, 20, 0];
 
+const ScrollableLineChart = () => {
   return (
-    <View style={{ flex: 1, backgroundColor: "#161622", padding: 16 }}>
-      <Text
-        style={{
-          fontSize: 24,
-          fontWeight: "bold",
-          color: "#FFFFFF",
-          marginBottom: 20,
-        }}
-      >
-        {selectedMachine ? selectedMachine.name : "Select a Machine"}
-      </Text>
-
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {/* Fixed Y-Axis Labels */}
-        <Svg height={chartHeight} width={50}>
-          {yAxisLabels.map((label, index) => (
-            <SvgText
-              key={index}
-              x={45}
-              y={
-                chartHeight -
-                40 -
-                (index * (chartHeight - 40)) / (yAxisLabels.length - 1)
-              }
-              fill="white"
-              fontSize="12"
-              textAnchor="end"
-            >
-              {label}
-            </SvgText>
-          ))}
-        </Svg>
-
-        {/* Scrollable X-Axis Data */}
-        <RNScrollView
-          horizontal={true}
-          showsHorizontalScrollIndicator={true}
-          style={{ flex: 1 }}
-        >
-          {selectedMachine && selectedMachine.yearlyData && (
-            <View
-              style={{
-                width: selectedMachine.yearlyData.length * 80,
-                flexDirection: "row",
-              }}
-            >
-              {selectedMachine.yearlyData.map((data, index) => (
-                <View key={index} style={{ width: 80, alignItems: "center" }}>
-                  <Text style={{ color: "white" }}>{data.month}</Text>
-                  <Text style={{ color: "white" }}>{data.fuelUsed}</Text>
-                  <Text style={{ color: "white" }}>{data.powerGenerated}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </RNScrollView>
+    <View style={styles.container}>
+      <View style={styles.yAxisContainer}>
+        {yAxisLabels.map((label, index) => (
+          <Text key={index} style={styles.yAxisLabel}>
+            {label}
+          </Text>
+        ))}
       </View>
+      <ScrollView horizontal={true} showsHorizontalScrollIndicator={true}>
+        <View style={{ width: screenWidth * 2 }}>
+          <LineChart
+            data={data}
+            width={screenWidth * 2} // Make the chart width larger than the screen width
+            height={220}
+            chartConfig={chartConfig}
+            verticalLabelRotation={30}
+            fromZero={true}
+            withVerticalLabels={true} // Show vertical labels
+            withHorizontalLabels={false} // Hide horizontal labels (Y-axis)
+            style={styles.chartStyle}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
-export default ScrollableChart;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1E2923",
+    flexDirection: "row",
+    paddingVertical: 10,
+  },
+  yAxisContainer: {
+    justifyContent: "space-between",
+    height: 220, // Ensure this matches the height of the chart
+    marginRight: 5,
+    marginLeft: 5, // Add some space between Y-axis labels and the chart
+    marginBottom: 10,
+  },
+  yAxisLabel: {
+    color: "white",
+    fontSize: 10,
+    letterSpacing: 1,
+    marginBottom: 22,
+  },
+  chartStyle: {
+    marginVertical: 4,
+    borderRadius: 16,
+    paddingRight: 1.5,
+    marginBottom: 10,
+  },
+});
+
+export default ScrollableLineChart;
