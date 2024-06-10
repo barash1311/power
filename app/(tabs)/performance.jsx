@@ -1,22 +1,42 @@
-import React, { useMemo } from "react";
-import { View, Text, Image, Dimensions } from "react-native";
-import { images } from "../../constants";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  Dimensions,
+  TextInput,
+  Modal,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollView, StyleSheet } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { PieChart } from "react-native-gifted-charts";
+import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams } from "expo-router";
-
-import machineData from "../../lib/testData"; // Importing the machine data
+import { images } from "../../constants";
+import machineData from "../../lib/testData";
+import { Calendar } from "react-native-calendars"; // Import Calendar from react-native-calendars
 
 const Performance = () => {
   const { machineId } = useLocalSearchParams();
   const screenWidth = Dimensions.get("window").width;
 
-  // Find the machine data based on machineId
-  const selectedMachine = machineId
-    ? machineData.find((machine) => machine.id == machineId)
-    : null;
+  const [selectedMachineId, setSelectedMachineId] = useState(machineId || "");
+  const [selectedStartDate, setSelectedStartDate] = useState("");
+  const [selectedEndDate, setSelectedEndDate] = useState("");
+  const [isStartDatePickerVisible, setStartDatePickerVisible] = useState(false);
+  const [isEndDatePickerVisible, setEndDatePickerVisible] = useState(false);
+
+  const handleStartDateSelect = (date) => {
+    setSelectedStartDate(date.dateString);
+    setStartDatePickerVisible(false);
+  };
+
+  const handleEndDateSelect = (date) => {
+    setSelectedEndDate(date.dateString);
+    setEndDatePickerVisible(false);
+  };
 
   // Calculate totals for the selected machine or all machines
   const calculateTotals = (data) => {
@@ -43,26 +63,32 @@ const Performance = () => {
     return { totalPowerGenerated, totalFuelConsumed };
   };
 
-  const { totalPowerGenerated, totalFuelConsumed } = selectedMachine
-    ? calculateTotals([selectedMachine])
+  const { totalPowerGenerated, totalFuelConsumed } = selectedMachineId
+    ? calculateTotals([
+        machineData.find((machine) => machine.id == selectedMachineId),
+      ])
     : calculateTotals(machineData);
 
   // Prepare data for the line chart
-  const lineChartData = selectedMachine
+  const lineChartData = selectedMachineId
     ? {
-        labels: selectedMachine.yearlyData.map((data) => data.month),
+        labels: machineData
+          .find((machine) => machine.id == selectedMachineId)
+          .yearlyData.map((data) => data.month),
         datasets: [
           {
-            data: selectedMachine.yearlyData.map((data) =>
-              parseInt(data.powerGenerated.split(" ")[0])
-            ),
-            color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`, // Color for power data
+            data: machineData
+              .find((machine) => machine.id == selectedMachineId)
+              .yearlyData.map((data) =>
+                parseInt(data.powerGenerated.split(" ")[0])
+              ),
+            color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`,
           },
           {
-            data: selectedMachine.yearlyData.map((data) =>
-              parseInt(data.fuelUsed.split(" ")[0])
-            ),
-            color: (opacity = 1) => `rgba(255, 102, 0, ${opacity})`, // Color for fuel data
+            data: machineData
+              .find((machine) => machine.id == selectedMachineId)
+              .yearlyData.map((data) => parseInt(data.fuelUsed.split(" ")[0])),
+            color: (opacity = 1) => `rgba(255, 102, 0, ${opacity})`,
           },
         ],
       }
@@ -82,21 +108,38 @@ const Performance = () => {
       gradientCenterColor: "#3BE9DE",
     },
   ];
+
+  // Styles
   const styles = StyleSheet.create({
+    modalBackground: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    calendarContainer: {
+      backgroundColor: "#161622",
+      padding: 20,
+      borderRadius: 10,
+    },
+    closeButton: {
+      color: "#FFFFFF",
+      textAlign: "center",
+      marginTop: 10,
+      fontSize: 16,
+    },
     container: {
       flex: 1,
       backgroundColor: "#1E2923",
       flexDirection: "row",
-      // paddingVertical: 10,
       paddingLeft: -5,
     },
     yAxisContainer: {
       justifyContent: "space-evenly",
-      height: 220, // Ensure this matches the height of the chart
+      height: 220,
       marginRight: 5,
-      marginLeft: 15, // Add some space between Y-axis labels and the chart
+      marginLeft: 15,
       marginBottom: -20,
-
       marginVertical: 72,
     },
     yAxisLabel: {
@@ -108,12 +151,10 @@ const Performance = () => {
       marginLeft: 10,
     },
     chartStyle: {
-      marginVertical: 10,
       marginVertical: 4,
       borderRadius: 16,
       paddingRight: 1.5,
       paddingLeft: 1.5,
-      // marginBottom: 10,
     },
   });
 
@@ -148,14 +189,15 @@ const Performance = () => {
     datasets: [
       {
         data: Array.from({ length: 12 }, () => Math.floor(Math.random() * 100)),
-        color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`, // Color for power data
+        color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`,
       },
       {
         data: Array.from({ length: 12 }, () => Math.floor(Math.random() * 50)),
-        color: (opacity = 1) => `rgba(255, 102, 0, ${opacity})`, // Color for fuel data
+        color: (opacity = 1) => `rgba(255, 102, 0, ${opacity})`,
       },
     ],
   };
+
   // Extracting maximum values for powerGenerated and fuelUsed from the test data
   const maxPowerGenerated = Math.max(
     ...machineData.flatMap((machine) =>
@@ -227,6 +269,150 @@ const Performance = () => {
             Performance Page
           </Text>
 
+          {/* Dropdown and Date Range Picker */}
+          <View style={{ flexDirection: "row", marginBottom: 20 }}>
+            {/* Dropdown */}
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={{ color: "white" }}>select a machine:</Text>
+              <Picker
+                selectedValue={selectedMachineId}
+                onValueChange={(itemValue) => setSelectedMachineId(itemValue)}
+                style={{
+                  color: "white",
+                  backgroundColor: "#161622",
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                  height: 40,
+                }}
+                itemStyle={{
+                  backgroundColor: "#161622",
+                  color: "white",
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                }}
+                dropdownIconColor="white"
+              >
+                {machineData.map((machine) => (
+                  <Picker.Item
+                    key={machine.id}
+                    label={machine.name}
+                    value={machine.id}
+                    style={{
+                      backgroundColor: "#161622",
+                      color: "white",
+                      paddingTop: 4,
+                      paddingBottom: 4,
+                    }}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            {/* Date Range Picker */}
+            <View style={{ flex: 1, marginRight: 5, borderColor: "red" }}>
+              <Text style={{ color: "white", marginBottom: 10 }}>
+                Select a date range:
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TouchableOpacity
+                  onPress={() => setStartDatePickerVisible(true)}
+                  style={{ flex: 1 }}
+                >
+                  <Text
+                    style={{
+                      color: "white",
+                      paddingVertical: 10,
+                      paddingHorizontal: 13,
+                      backgroundColor: "#161622",
+                      borderRadius: 5,
+                    }}
+                  >
+                    {selectedStartDate ? selectedStartDate : "Start Date"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setEndDatePickerVisible(true)}
+                  style={{ flex: 1 }}
+                >
+                  <Text
+                    style={{
+                      color: "white",
+                      paddingVertical: 10,
+                      paddingHorizontal: 13,
+                      backgroundColor: "#161622",
+                      borderRadius: 5,
+                    }}
+                  >
+                    {selectedEndDate ? selectedEndDate : "End Date"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <Modal
+            visible={isStartDatePickerVisible}
+            transparent={true}
+            animationType="slide"
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.calendarContainer}>
+                <Calendar
+                  onDayPress={handleStartDateSelect}
+                  theme={{
+                    backgroundColor: "#161622",
+                    calendarBackground: "#161622",
+                    textSectionTitleColor: "#FFFFFF",
+                    selectedDayBackgroundColor: "#FFFFFF",
+                    selectedDayTextColor: "#000000",
+                    todayTextColor: "#00adf5",
+                    dayTextColor: "#FFFFFF",
+                    textDisabledColor: "#444",
+                    monthTextColor: "#FFFFFF",
+                    arrowColor: "white",
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setStartDatePickerVisible(false)}
+                >
+                  <Text style={styles.closeButton}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={isEndDatePickerVisible}
+            transparent={true}
+            animationType="slide"
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.calendarContainer}>
+                <Calendar
+                  onDayPress={handleEndDateSelect}
+                  theme={{
+                    paddingTop: 50,
+                    backgroundColor: "#161622",
+                    calendarBackground: "#161622",
+                    textSectionTitleColor: "#FFFFFF",
+                    selectedDayBackgroundColor: "#FFFFFF",
+                    selectedDayTextColor: "#000000",
+                    todayTextColor: "#00adf5",
+                    dayTextColor: "#FFFFFF",
+                    textDisabledColor: "#444",
+                    monthTextColor: "#FFFFFF",
+                    arrowColor: "white",
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setEndDatePickerVisible(false)}
+                >
+                  <Text style={styles.closeButton}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
           {/* Pie Chart */}
           <View
             style={{
@@ -288,19 +474,19 @@ const Performance = () => {
             >
               <View
                 style={{
-                  width: selectedMachine ? screenWidth * 2 : screenWidth * 3, // Adjust width based on data length
+                  width: selectedMachineId ? screenWidth * 2 : screenWidth * 3,
                 }}
               >
                 <LineChart
-                  data={selectedMachine ? lineChartData : randomLineChartData}
-                  width={selectedMachine ? 600 : 1200}
+                  data={selectedMachineId ? lineChartData : randomLineChartData}
+                  width={selectedMachineId ? 600 : 1200}
                   height={400}
                   bezier
                   chartConfig={{
                     backgroundGradientFrom: "#1E2923",
                     backgroundGradientTo: "#08130D",
                     strokeWidth: 3,
-                    color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`, // Default color
+                    color: (opacity = 1) => `rgba(26, 155, 146, ${opacity})`,
                   }}
                   style={styles.chartStyle}
                   yAxisLabel={yAxisLabels}
